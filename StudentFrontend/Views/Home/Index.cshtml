@@ -1,0 +1,168 @@
+﻿@{
+    ViewData["Title"] = "Students";
+}
+
+<div class="container mt-4">
+
+    <h2>Student List</h2>
+    <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#studentModal" id="btnAddNew">Add New Student</button>
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Age</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="studentTableBody"></tbody>
+    </table>
+
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="studentModal" tabindex="-1" aria-labelledby="studentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="studentModalLabel">Add Student</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="txtId" />
+                <div class="mb-3">
+                    <label for="txtName" class="form-label">Name</label>
+                    <input type="text" class="form-control" id="txtName">
+                </div>
+                <div class="mb-3">
+                    <label for="txtDepartment" class="form-label">Department</label>
+                    <input type="text" class="form-control" id="txtDepartment">
+                </div>
+                <div class="mb-3">
+                    <label for="txtAge" class="form-label">Age</label>
+                    <input type="number" class="form-control" id="txtAge">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnSave">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const apiUrl = "https://localhost:7235/api/students";
+
+        $(document).ready(function () {
+            loadStudents();
+
+            $("#btnAddNew").click(function () {
+                clearForm();
+                $("#studentModalLabel").text("Add Student");
+            });
+
+            // Save or Update
+            $("#btnSave").click(function () {
+                let id = $("#txtId").val();
+                if (id) updateStudent(id);
+                else saveStudent();
+            });
+
+            function loadStudents() {
+                $.getJSON(apiUrl, function (data) {
+                    const tbody = $("#studentTableBody");
+                    tbody.empty();
+                    $.each(data, function (index, student) {
+                        let tr = `<tr>
+                            <td>${student.studentId}</td>
+                            <td>${student.name}</td>
+                            <td>${student.department}</td>
+                            <td>${student.age}</td>
+                            <td>
+                                <button class="btn btn-warning btn-sm me-1" onclick="editStudent(${student.studentId})">Edit</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteStudent(${student.studentId})">Delete</button>
+                            </td>
+                        </tr>`;
+                        tbody.append(tr);
+                    });
+                });
+            }
+
+            function saveStudent() {
+                let student = {
+                    name: $("#txtName").val(),
+                    department: $("#txtDepartment").val(),
+                    age: parseInt($("#txtAge").val())
+                };
+                $.ajax({
+                    url: apiUrl,
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify(student),
+                    success: function () {
+                        clearForm();
+                        $("#studentModal").modal('hide');
+                        loadStudents();
+                    },
+                    error: function (xhr) { console.log(xhr.responseText); }
+                });
+            }
+
+            function updateStudent(id) {
+                let student = {
+                    studentId: parseInt(id),
+                    name: $("#txtName").val(),
+                    department: $("#txtDepartment").val(),
+                    age: parseInt($("#txtAge").val())
+                };
+                $.ajax({
+                    url: `${apiUrl}/${id}`,
+                    type: "PUT",
+                    contentType: "application/json",
+                    data: JSON.stringify(student),
+                    success: function () {
+                        clearForm();
+                        $("#studentModal").modal('hide');
+                        loadStudents();
+                    },
+                    error: function (xhr) { console.log(xhr.responseText); }
+                });
+            }
+
+            function clearForm() {
+                $("#txtId").val("");
+                $("#txtName").val("");
+                $("#txtDepartment").val("");
+                $("#txtAge").val("");
+            }
+
+            window.editStudent = function (id) {
+                $.getJSON(`${apiUrl}/${id}`, function (student) {
+                    $("#txtId").val(student.studentId);
+                    $("#txtName").val(student.name);
+                    $("#txtDepartment").val(student.department);
+                    $("#txtAge").val(student.age);
+                    $("#studentModalLabel").text("Edit Student");
+                    $("#studentModal").modal('show');
+                });
+            };
+
+            window.deleteStudent = function (id) {
+                if (!confirm("Are you sure you want to delete this student?")) return;
+                $.ajax({
+                    url: `${apiUrl}/${id}`,
+                    type: "DELETE",
+                    success: function () { loadStudents(); },
+                    error: function (xhr) { console.log(xhr.responseText); }
+                });
+            };
+        });
+    </script>
+}
